@@ -69,6 +69,9 @@ jobs:
           fi
           cp -r out/. "$DEST"/
           touch .nojekyll
+          # Never publish build tooling (gh-pages has no .gitignore on
+          # first orphan creation, so delete by hand before staging)
+          rm -rf node_modules out .next
           git add -A
           git commit -m "deploy: ${GITHUB_REF_NAME} -> /${DEST}" || echo "no changes to deploy"
           git push origin gh-pages
