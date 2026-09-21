@@ -1,0 +1,77 @@
+name: Deploy branch sites to GitHub Pages
+
+# Every push builds that branch as a static site and publishes it:
+#   main          -> optics-framework.org/
+#   <any-branch>  -> optics-framework.org/<branch>/
+# (slashes in branch names become dashes)
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Resolve deploy target
+        id: target
+        run: |
+          SAFE="${GITHUB_REF_NAME//\//-}"
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            echo "base_path=" >> "$GITHUB_OUTPUT"
+            echo "dest=." >> "$GITHUB_OUTPUT"
+          else
+            echo "base_path=/$SAFE" >> "$GITHUB_OUTPUT"
+            echo "dest=$SAFE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build static site
+        run: npm run build
+        env:
+          PAGES_BASE_PATH: ${{ steps.target.outputs.base_path }}
+
+      - name: Publish to gh-pages
+        run: |
+          set -e
+          DEST="${{ steps.target.outputs.dest }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages 2>/dev/null || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout gh-pages
+            git pull --rebase origin gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . 2>/dev/null || true
+          fi
+          if [ "$DEST" = "." ]; then
+            # Root deploy: clear everything except .git and CNAME
+            find . -maxdepth 1 -not -name '.git' -not -name 'CNAME' -not -name '.' -exec rm -rf {} +
+          else
+            rm -rf "$DEST"
+            mkdir -p "$DEST"
+          fi
+          cp -r out/. "$DEST"/
+          touch .nojekyll
+          # Never publish build tooling (gh-pages has no .gitignore on
+          # first orphan creation, so delete by hand before staging)
+          rm -rf node_modules out .next
+          git add -A
+          git commit -m "deploy: ${GITHUB_REF_NAME} -> /${DEST}" || echo "no changes to deploy"
+          git push origin gh-pages
