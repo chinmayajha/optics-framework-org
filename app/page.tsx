@@ -8,6 +8,8 @@ import { Mark } from "../components/Mark";
 const DOCS = "https://mozarkai.github.io/optics-framework/";
 const QUICKSTART = "https://mozarkai.github.io/optics-framework/getting-started/";
 const GITHUB = "https://github.com/mozarkai/optics-framework";
+const INSTALL_URL = "https://optics-framework.org/install";
+const INSTALL_DOCS = "https://mozarkai.github.io/optics-framework/prerequisites/";
 
 const features = [
   {
@@ -177,13 +179,21 @@ export default function Page() {
 
             <div className="codeblock mt-8 max-w-xl rounded-md border border-line px-5 py-4">
               <p>
-                <span className="text-copper-bright">$</span> pip install
-                &quot;optics-framework[appium,easyocr]&quot;
+                <span className="text-copper-bright">$</span> curl -fsSL {INSTALL_URL} | sh
               </p>
               <p>
                 <span className="text-copper-bright">$</span> optics quickstart
               </p>
             </div>
+            <p className="mt-3 text-sm text-muted">
+              macOS and Linux. Installs into its own environment under{" "}
+              <code className="font-mono">~/.optics</code> — nothing touches your
+              system Python. Already a Python shop?{" "}
+              <a href={INSTALL_DOCS} target="_blank" rel="noreferrer" className="underline hover:text-ink">
+                Install with pip instead
+              </a>
+              .
+            </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
               {badges.map((b) => (
@@ -329,7 +339,7 @@ Add Contact with Contact App,Verify Contact is Added`}
             </p>
             <div className="codeblock mt-7 max-w-xl rounded-md border border-white/10 px-5 py-4">
               <p>
-                <span className="text-copper-bright">$</span> pip install optics-framework
+                <span className="text-copper-bright">$</span> curl -fsSL {INSTALL_URL} | sh
               </p>
               <p>
                 <span className="text-copper-bright">$</span> optics quickstart
