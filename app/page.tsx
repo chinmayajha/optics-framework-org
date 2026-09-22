@@ -177,16 +177,35 @@ export default function Page() {
               <Button href={GITHUB} variant="secondary">View on GitHub</Button>
             </div>
 
-            <div className="codeblock mt-8 max-w-xl rounded-md border border-line px-5 py-4">
-              <p>
-                <span className="text-copper-bright">$</span> curl -fsSL {INSTALL_URL} | sh
-              </p>
+            <div className="mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
+              <div>
+                <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-muted">
+                  macOS &amp; Linux
+                </p>
+                <div className="codeblock rounded-md border border-line px-5 py-4">
+                  <p>
+                    <span className="text-copper-bright">$</span> curl -fsSL {INSTALL_URL} | sh
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.14em] text-muted">
+                  Windows
+                </p>
+                <div className="codeblock rounded-md border border-line px-5 py-4">
+                  <p>
+                    <span className="text-copper-bright">&gt;</span> irm {INSTALL_URL}.ps1 | iex
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="codeblock mt-4 max-w-xl rounded-md border border-line px-5 py-4">
               <p>
                 <span className="text-copper-bright">$</span> optics quickstart
               </p>
             </div>
-            <p className="mt-3 text-sm text-muted">
-              macOS and Linux. Installs into its own environment under{" "}
+            <p className="mt-3 max-w-2xl text-sm text-muted">
+              Installs into its own environment under{" "}
               <code className="font-mono">~/.optics</code> — nothing touches your
               system Python. Already a Python shop?{" "}
               <a href={INSTALL_DOCS} target="_blank" rel="noreferrer" className="underline hover:text-ink">
@@ -340,6 +359,10 @@ Add Contact with Contact App,Verify Contact is Added`}
             <div className="codeblock mt-7 max-w-xl rounded-md border border-white/10 px-5 py-4">
               <p>
                 <span className="text-copper-bright">$</span> curl -fsSL {INSTALL_URL} | sh
+              </p>
+              <p className="text-paper/45">
+                <span className="text-copper-bright">&gt;</span> irm {INSTALL_URL}.ps1 | iex
+                &nbsp;&nbsp;# Windows
               </p>
               <p>
                 <span className="text-copper-bright">$</span> optics quickstart
