@@ -69,7 +69,12 @@ jobs:
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
-          $found = Invoke-ScriptAnalyzer -Path public/install.ps1 -Severity Error,Warning
+          # PSAvoidUsingWriteHost is excluded deliberately: every line this
+          # script prints is for the person running it, not for a pipeline.
+          # Write-Output would make that output capturable, which is exactly
+          # what an installer's progress messages should not be.
+          $found = Invoke-ScriptAnalyzer -Path public/install.ps1 `
+            -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
           if ($found) { $found | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
           Write-Host 'PSScriptAnalyzer clean'
 
