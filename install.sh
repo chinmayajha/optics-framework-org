@@ -31,15 +31,14 @@ if [ -n "${OPTICS_NO_MODIFY_PATH:-}" ]; then MODIFY_PATH=0; fi
 # Colour only when stdout is a terminal; `curl | sh` into a pipe stays plain.
 if [ -t 1 ]; then
     B=$(printf '\033[1m'); DIM=$(printf '\033[2m'); R=$(printf '\033[0m')
-    GREEN=$(printf '\033[32m'); YELLOW=$(printf '\033[33m'); RED=$(printf '\033[31m')
+    GREEN=$(printf '\033[32m'); RED=$(printf '\033[31m')
 else
-    B=''; DIM=''; R=''; GREEN=''; YELLOW=''; RED=''
+    B=''; DIM=''; R=''; GREEN=''; RED=''
 fi
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '  %s→%s %s\n' "$DIM" "$R" "$*"; }
 ok()   { printf '  %s✓%s %s\n' "$GREEN" "$R" "$*"; }
-warn() { printf '  %s!%s %s\n' "$YELLOW" "$R" "$*" >&2; }
 die()  { printf '\n%sCannot install:%s %s\n' "$RED" "$R" "$1" >&2; shift
          for line in "$@"; do printf '  %s\n' "$line" >&2; done; exit 1; }
 
@@ -192,21 +191,17 @@ exec "$VENV/bin/optics" "\$@"
 EOF
 chmod +x "$BIN/optics"
 
-INSTALLED=$("$BIN/optics" --version 2>/dev/null || true)
-[ -n "$INSTALLED" ] || die "Installed, but '$BIN/optics --version' did not run." \
-    "" "Report this at https://github.com/mozarkai/optics-framework/issues"
-ok "$INSTALLED"
-
-# ------------------------------------------------------------------- libGL --
-# opencv is a core dependency and links against libGL, which minimal Linux
-# images do not ship. Catch it here rather than letting the first command die
-# on an import error.
-if [ "$(uname -s)" = "Linux" ] && ! "$VENV/bin/python" -c 'import cv2' >/dev/null 2>&1; then
-    warn "OpenCV cannot load — your system is probably missing libGL:"
-    warn "    Debian/Ubuntu:  sudo apt install -y libgl1"
-    warn "    Fedora/RHEL:    sudo dnf install -y mesa-libGL"
-    warn "    Alpine:         sudo apk add mesa-gl"
+# Run the CLI rather than trusting the install: a package can land correctly
+# and still fail to start if a system library it links against is missing.
+# Optics diagnoses that itself and names the library, so show what it said
+# instead of guessing at the cause here.
+if ! VERSION_OUTPUT=$("$BIN/optics" --version 2>&1); then
+    printf '\n%sInstalled, but optics could not start:%s\n\n' "$RED" "$R" >&2
+    printf '%s\n' "$VERSION_OUTPUT" >&2
+    printf '\nFix the above, then run:  %s --version\n' "$BIN/optics" >&2
+    exit 1
 fi
+ok "$VERSION_OUTPUT"
 
 # -------------------------------------------------------------------- PATH --
 profile_for_shell() {
