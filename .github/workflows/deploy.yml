@@ -74,6 +74,13 @@ jobs:
               | sed 's|.*refs/heads/||; s|/|-|g' > /tmp/live-branches
             for path in $(find . -maxdepth 1 -mindepth 1 -not -name '.git' -not -name 'CNAME'); do
               name=$(basename "$path")
+              case "$name" in
+                # The build we are about to publish, and the tooling that
+                # produced it. Checking out gh-pages carries them over from the
+                # source branch, where they are gitignored; they are deleted
+                # further down, before anything is staged.
+                out|node_modules|.next) continue ;;
+              esac
               if [ -d "$path" ] && grep -qxF "$name" /tmp/live-branches; then
                 echo "keeping branch preview: $name"
                 continue
