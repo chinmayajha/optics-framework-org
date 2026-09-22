@@ -1,0 +1,104 @@
+name: Test the installers
+
+# The installers are the first thing a new user runs, and they touch parts of
+# the system the site build never does: shell profiles, PATH, venv creation.
+# Run them on a real machine of each kind rather than trusting review.
+
+on:
+  push:
+    paths:
+      - 'public/install.sh'
+      - 'public/install.ps1'
+      - '.github/workflows/test-installer.yml'
+  pull_request:
+    paths:
+      - 'public/install.sh'
+      - 'public/install.ps1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  posix:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        if: runner.os == 'Linux'
+        run: shellcheck -s sh public/install.sh
+
+      - name: --help and --dry-run change nothing
+        run: |
+          set -eu
+          sh public/install.sh --help > /dev/null
+          OPTICS_INSTALL_DIR="$HOME/probe" sh public/install.sh --dry-run > /dev/null
+          test ! -e "$HOME/probe"
+
+      - name: install
+        run: sh public/install.sh --no-modify-path
+
+      - name: the CLI runs
+        run: |
+          set -eu
+          "$HOME/.optics/bin/optics" --version
+          "$HOME/.optics/bin/optics" list > /dev/null
+
+      - name: re-running is idempotent
+        run: sh public/install.sh --no-modify-path
+
+      - name: uninstall leaves nothing behind
+        run: |
+          set -eu
+          sh public/install.sh --uninstall
+          test ! -e "$HOME/.optics"
+
+  windows:
+    name: windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
+          $found = Invoke-ScriptAnalyzer -Path public/install.ps1 -Severity Error,Warning
+          if ($found) { $found | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
+          Write-Host 'PSScriptAnalyzer clean'
+
+      - name: -DryRun changes nothing
+        shell: pwsh
+        run: |
+          $probe = Join-Path $HOME 'probe'
+          ./public/install.ps1 -Dir $probe -DryRun | Out-Null
+          if (Test-Path $probe) { throw "-DryRun created $probe" }
+
+      - name: install
+        shell: pwsh
+        run: ./public/install.ps1 -NoModifyPath
+
+      - name: the CLI runs
+        shell: pwsh
+        run: |
+          $optics = Join-Path $HOME '.optics\bin\optics.cmd'
+          & $optics --version
+          if ($LASTEXITCODE -ne 0) { throw 'optics --version failed' }
+          & $optics list | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'optics list failed' }
+
+      - name: re-running is idempotent
+        shell: pwsh
+        run: ./public/install.ps1 -NoModifyPath
+
+      - name: uninstall leaves nothing behind
+        shell: pwsh
+        run: |
+          ./public/install.ps1 -Uninstall
+          if (Test-Path (Join-Path $HOME '.optics')) { throw 'uninstall left files behind' }
