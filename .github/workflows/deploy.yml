@@ -61,8 +61,20 @@ jobs:
             git rm -rf . 2>/dev/null || true
           fi
           if [ "$DEST" = "." ]; then
-            # Root deploy: clear everything except .git and CNAME
-            find . -maxdepth 1 -not -name '.git' -not -name 'CNAME' -not -name '.' -exec rm -rf {} +
+            # Root deploy: clear the previous root build, but keep every
+            # directory that is a live branch's preview site. Deleting those
+            # would take every branch preview offline until its branch was
+            # pushed again.
+            git ls-remote --heads origin \
+              | sed 's|.*refs/heads/||; s|/|-|g' > /tmp/live-branches
+            for path in $(find . -maxdepth 1 -mindepth 1 -not -name '.git' -not -name 'CNAME'); do
+              name=$(basename "$path")
+              if [ -d "$path" ] && grep -qxF "$name" /tmp/live-branches; then
+                echo "keeping branch preview: $name"
+                continue
+              fi
+              rm -rf "$path"
+            done
           else
             rm -rf "$DEST"
             mkdir -p "$DEST"
