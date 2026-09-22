@@ -52,9 +52,8 @@ $Bin  = Join-Path $Dir 'bin'
 
 function Write-Step { param([string] $Message) Write-Host "  -> $Message" -ForegroundColor DarkGray }
 function Write-Ok   { param([string] $Message) Write-Host "  [ok] $Message" -ForegroundColor Green }
-function Write-Warn { param([string] $Message) Write-Host "  [!] $Message" -ForegroundColor Yellow }
 
-function Stop-WithHelp {
+function Write-FatalError {
     param([string] $Reason, [string[]] $Guidance = @())
     Write-Host ''
     Write-Host "Cannot install: $Reason" -ForegroundColor Red
@@ -90,8 +89,8 @@ Write-Host ''
 function Get-PythonVersion {
     param([string] $Exe, [string[]] $Prefix = @())
     try {
-        $args = $Prefix + @('-c', 'import sys; print("%d.%d.%d" % sys.version_info[:3])')
-        $output = & $Exe @args 2>$null
+        $probeArgs = $Prefix + @('-c', 'import sys; print("%d.%d.%d" % sys.version_info[:3])')
+        $output = & $Exe @probeArgs 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $output) { return $null }
         return ($output | Select-Object -First 1).Trim()
     } catch {
@@ -130,7 +129,7 @@ function Find-Python {
 
 $python = Find-Python
 if (-not $python) {
-    Stop-WithHelp 'Optics needs Python 3.12 or newer, and no suitable Python was found.' @(
+    Write-FatalError 'Optics needs Python 3.12 or newer, and no suitable Python was found.' @(
         ''
         'Install one, then re-run this script:'
         ''
@@ -170,7 +169,7 @@ if (Test-Path $VenvPython) {
     $venvArgs = $python.Prefix + @('-m', 'venv', $Venv)
     $venvLog = & $python.Exe @venvArgs 2>&1
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $VenvPython)) {
-        Stop-WithHelp "Could not create a virtual environment at $Venv." @('', ($venvLog | Out-String))
+        Write-FatalError "Could not create a virtual environment at $Venv." @('', ($venvLog | Out-String))
     }
 }
 
@@ -178,14 +177,14 @@ if (Test-Path $VenvPython) {
 Write-Step "Installing $Spec"
 & $VenvPython -m pip install --quiet --disable-pip-version-check --upgrade $Spec
 if ($LASTEXITCODE -ne 0) {
-    Stop-WithHelp "pip could not install $Spec." @(
+    Write-FatalError "pip could not install $Spec." @(
         ''
         'Re-run with -Version to pin a known-good release, or see'
         '  https://pypi.org/project/optics-framework/'
     )
 }
 if (-not (Test-Path $VenvOptics)) {
-    Stop-WithHelp "The package installed but no optics command appeared in $Venv\Scripts."
+    Write-FatalError "The package installed but no optics command appeared in $Venv\Scripts."
 }
 
 # ----------------------------------------------------------------------- shim
@@ -199,7 +198,7 @@ New-Item -ItemType Directory -Force -Path $Bin | Out-Null
 
 $installed = (& $Shim --version 2>&1 | Out-String).Trim()
 if (-not $installed) {
-    Stop-WithHelp "Installed, but '$Shim --version' did not run." @(
+    Write-FatalError "Installed, but '$Shim --version' did not run." @(
         '', 'Report this at https://github.com/mozarkai/optics-framework/issues'
     )
 }
