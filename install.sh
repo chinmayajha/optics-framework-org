@@ -106,6 +106,20 @@ say ""
 say "${B}Optics Framework installer${R}"
 say ""
 
+# Git Bash, MSYS2 and Cygwin give you a POSIX shell on top of a Windows Python,
+# whose virtual environments put executables in Scripts\ rather than bin/. This
+# script would install and then fail to find the CLI, so send them to the
+# PowerShell installer instead of part-way through a broken install. WSL is a
+# real Linux and reports as such, so it is unaffected.
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        die "This is the macOS and Linux installer, and you are on Windows." \
+            "" "Run the PowerShell installer instead, from PowerShell:" \
+            "" "  irm https://optics-framework.org/install.ps1 | iex" \
+            "" "(Inside WSL, this script is the right one.)"
+        ;;
+esac
+
 # ------------------------------------------------------------------ python --
 # Lowest supported version first, deliberately. Optics pulls opencv, scikit-image
 # and (via easyocr) torch; on a just-released Python those have no wheels yet and
